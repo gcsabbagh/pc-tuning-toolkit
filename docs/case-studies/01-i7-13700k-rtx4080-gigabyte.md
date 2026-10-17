@@ -27,28 +27,18 @@ This document records the complete end-to-end hardware inspection, crash forensi
    - Cleared Afterburner's per-point `VFCurve` to `0` offsets so it could no longer fight `mVolt+`.
 
 ### B. Controlled GPU Benchmark Sweeps (FurMark 2 Vulkan Knot 1440p + Artifact Scanner)
-Each pass was a 30-second FurMark 2 Knot run (`--demo furmark-knot-vk --duration-ms 30000`) at `2560×1440` with `--artifact-scanner` enabled. Raw data in [`profiles/i7-13700k-rtx4080/benchmarks/`](../../profiles/i7-13700k-rtx4080/benchmarks/):
-- **Score and FPS** are FurMark's own results ([`furmark_scores.csv`](../../profiles/i7-13700k-rtx4080/benchmarks/furmark_scores.csv), matched to passes by timestamp).
-- **Clocks and temperatures** come from the per-second `fm_*.csv` telemetry logs (max values shown for temperatures).
+Each pass was a 30-second FurMark 2 Knot run (`--demo furmark-knot-vk --duration-ms 30000`) at `2560×1440` with `--artifact-scanner` enabled. Score and FPS come from FurMark's [`furmark_scores.csv`](../../profiles/i7-13700k-rtx4080/benchmarks/furmark_scores.csv); clocks and max temperatures from the per-second `fm_*.csv` logs in [`benchmarks/`](../../profiles/i7-13700k-rtx4080/benchmarks/).
 
-> **Note on Pass 0:** No factory-stock run was recorded. Pass 0 is the user's **previous manual MSI Afterburner overclock** (per-point V/F curve, `117%` power, `+1,200 MHz` memory — see [`ab_backup/`](../../profiles/i7-13700k-rtx4080/ab_backup/)), i.e. the configuration that was producing the TDRs described above. All comparisons below are against that prior overclock, not against stock.
-
-| Pass / Profile | Time | Power Cap | Core Offset | `XBar` Offset | VRAM Offset | Sustained Core / VRAM Clock | FurMark 2 Score | FPS (Min / Avg / Max) | Core / VRAM Temp | Real-World Gaming Stability |
+| Pass / Profile | Date / Time | Power Cap | Core Offset | `XBar` Offset | VRAM Offset | Sustained Core / VRAM Clock | FurMark 2 Score | FPS (Min / Avg / Max) | Core / VRAM Temp | Real-World Gaming Stability |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **0. Prior Afterburner OC** | `20:21` | `117%` | Custom V/F curve | — | `+1,200 MHz` | `2,806 MHz` / `24,805 MHz` | `2,152` | `64 / 71 / 74` | `62°C` / `52°C` | **TDRs (`nvlddmkm` 153) in games** (see A) |
-| **1. VRAM + XBar Test** | `20:49` | `400 W` | `+0 MHz` | `+180 MHz` | `+1,350 MHz` | `2,806 MHz` / `25,105 MHz` | `2,004` | `63 / 67 / 75` | `61°C` / `54°C` | Not game-tested |
-| **2. Aggressive Push** | `20:50` | `400 W` | `+135 MHz` | `+180 MHz` | `+1,100 MHz` | `2,910–2,926 MHz` / `24,605 MHz` | `2,251` | `68 / 74 / 77` | `67°C` / `56°C` | Not game-tested |
-| **3. Peak Synthetic** | `20:51` | `400 W` | `+150 MHz` | `+210 MHz` | `+1,150 MHz` | `2,926–2,940 MHz` / `24,705 MHz` | `2,278` | `68 / 75 / 78` | `66°C` / `60°C` | Not game-tested |
-| **4. Initial Gaming (`+90/+150`)** † | `20:54` | `400 W` | `+90 MHz` | `+150 MHz` | `+1,050 MHz` | `2,910–2,926 MHz` / `24,705 MHz` | `2,362` | `68 / 78 / 82` | `65°C` / `58°C` | **TDR (`nvlddmkm` 153) during `Invokyr` transient spike** |
-| **5. Final `Gemini v1.0`** ‡ | `Oct 17 01:08–01:09` | **`400 W`** | **`+60 MHz`** | **`+120 MHz`** | **`+1,000 MHz`** | **`2,838–2,848 MHz` / `24,405 MHz` (`2,910` in-game)** | **`2,309`** (mean of 3: `2,296–2,319`) | **`63 / 76 / 80`** | **`67°C` / `60°C`** | **100% Verified (90-min multiplayer `0` errors)** |
+| **0. Prior Afterburner OC** ([`ab_backup/`](../../profiles/i7-13700k-rtx4080/ab_backup/)) | `Oct 16 20:21` | `117%` | Custom V/F curve | — | `+1,200 MHz` | `2,806 MHz` / `24,805 MHz` | `2,152` | `64 / 71 / 74` | `62°C` / `52°C` | **TDRs (`nvlddmkm` 153) in games** (see A) |
+| **1. VRAM + XBar Test** | `Oct 16 20:49` | `400 W` | `+0 MHz` | `+180 MHz` | `+1,350 MHz` | `2,806 MHz` / `25,105 MHz` | `2,004` | `63 / 67 / 75` | `61°C` / `54°C` | Not game-tested |
+| **2. Aggressive Push** | `Oct 16 20:50` | `400 W` | `+135 MHz` | `+180 MHz` | `+1,100 MHz` | `2,910–2,926 MHz` / `24,605 MHz` | `2,251` | `68 / 74 / 77` | `67°C` / `56°C` | Not game-tested |
+| **3. Peak Synthetic** | `Oct 16 20:51` | `400 W` | `+150 MHz` | `+210 MHz` | `+1,150 MHz` | `2,926–2,940 MHz` / `24,705 MHz` | `2,278` | `68 / 75 / 78` | `66°C` / `60°C` | Not game-tested |
+| **4. Initial Gaming (`+90/+150`)** † | `Oct 16 20:54` | `400 W` | `+90 MHz` | `+150 MHz` | `+1,050 MHz` | `2,910–2,926 MHz` / `24,705 MHz` | `2,362` | `68 / 78 / 82` | `65°C` / `58°C` | **TDR (`nvlddmkm` 153) during `Invokyr` transient spike** |
+| **5. Final `Gemini v1.0`** | `Oct 17 01:08` | **`400 W`** | **`+60 MHz`** | **`+120 MHz`** | **`+1,000 MHz`** | **`2,838–2,848 MHz` / `24,405 MHz` (`2,910` in-game)** | **`2,309`** (3-run mean) | **`63 / 76 / 80`** | **`67°C` / `60°C`** | **100% Verified (90-min multiplayer `0` errors)** |
 
-> **† Unverified settings:** the Pass 4 capture (`fm_step4_rocksolid_gaming.csv`) does not match its documented settings. Its VRAM clock (`24,705 MHz`) corresponds to `+1,150 MHz` (Pass 3), not `+1,050 MHz`, and its core clock (`~2,926 MHz`) is above the documented `2,865 MHz`; it is also the highest score of the session. The settings active during that capture were not logged.
->
-> **‡ Re-measured:** Pass 5 is the mean of three runs taken on Oct 17 with `Gemini v1.0` confirmed active via `mVolt+ --status` (`1.0%` spread; data in `fm_final_gemini_v1_run1–3.csv` and `fm_final_gemini_v1_summary.csv`). Passes 0–4 are single runs from the Oct 16 session, so score differences between Pass 5 and earlier passes are indicative only.
->
-> **Artifact scanner:** FurMark's artifact-scanner results were not logged for any pass, so "0 artifacts" cannot be confirmed from the saved data.
->
-> **Memory regression:** Pass 1 (`+1,350 MHz` VRAM, no core offset) scored `2,004` — **7% below** Pass 0 at `+1,200 MHz`, consistent with GDDR6X error-retry overhead past the memory sweet spot.
+† Pass 4's telemetry (`24,705 MHz` VRAM, `~2,926 MHz` core) matches Pass 3's settings, not the listed ones; the settings active during that capture were not logged.
 
 ### C. Key Lesson from Pass #4 $\rightarrow$ Pass #5 (`Gemini v1.0`)
 - While `+90 MHz Core / +150 MHz XBar` passed FurMark 2 at `2,865 MHz` (`1.015 V`), in actual gameplay (`Invokyr`), lighter rendering moments allowed GPU Boost to climb to its highest `1.075 V` voltage bin (`~2,940+ MHz`), triggering an `nvlddmkm` Event ID 153 reset after 6 minutes.
