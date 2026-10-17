@@ -1,24 +1,18 @@
-<#
-.SYNOPSIS
-    Applies the verified "Gemini v1.0" Rock-Solid Multiplayer Gaming GPU Profile
-    for the Gigabyte GeForce RTX 4080 (VBIOS 95.03.2b.40.3b) via mVolt+.
-    - Power Cap : 400 W (117% VBIOS Maximum)
-    - Core      : +60 MHz Dynamic Offset (Default Clock Range)
-    - XBar      : +120 MHz Crossbar L2 Interconnect Offset
-    - Memory    : +1000 MHz GDDR6X (12,201 MHz / 24.4 Gbps effective)
-#>
+# Applies the verified "Gemini v1.0" Rock-Solid Gaming profile for Gigabyte GeForce RTX 4080
+# Settings: Power Cap = 400W (117%), Core Offset = +60 MHz, Crossbar Offset = +120 MHz, VRAM Offset = +1000 MHz
 param(
+    # Print the checks and the mVolt+ command without touching the GPU.
     [switch]$DryRun,
+    # Skip the RTX 4080 model check (only if you know what you're doing).
     [switch]$SkipGpuCheck
 )
 
-$ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
-# 1. Require Administrator privileges (NVAPI clock/power writes fail without elevation)
+# 1. Administrator check (mVolt+ needs NVAPI write access)
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-if (-not $isAdmin) {
-    Write-Error "Apply-Gemini-v1.0-4080.ps1 must be run as Administrator."
+if (-not $isAdmin -and -not $DryRun) {
+    Write-Error "This profile must be applied from an Administrator PowerShell (mVolt+ requires Admin rights)."
     exit 1
 }
 

@@ -80,3 +80,4 @@ Whenever you modify any PowerShell script in [`scripts/`](scripts/), profile scr
 # Static-only verification (if running without Admin rights or supported hardware)
 .\tests\Invoke-SmokeTests.ps1 -SkipHardwareTests
 ```
+
