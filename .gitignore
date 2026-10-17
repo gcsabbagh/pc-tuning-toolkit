@@ -1,0 +1,14 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# Local downloaded binaries (bootstrapped via scripts/Bootstrap-Tools.ps1)
+# Git cannot re-include a file whose parent directory is excluded, so un-ignore
+# the tools/bin/ directory itself, ignore its contents, then keep .gitkeep.
+!tools/bin/
+tools/bin/*
+!tools/bin/.gitkeep
+
+# Temporary logs
+*.tmp
+*.log
