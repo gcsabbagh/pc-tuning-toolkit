@@ -18,7 +18,7 @@ Hardware tuning scripts interact directly with ring-0 sensors (`PawnIO` / `Libre
 ## 2. How to Run the Smoke Test Suite
 
 ### Full Suite (Recommended — Run from an Administrator PowerShell)
-Runs all 22 static, build, and live read-only hardware/telemetry tests:
+Runs all 23 static, build, and live read-only hardware/telemetry tests:
 
 ```powershell
 .\tests\Invoke-SmokeTests.ps1
@@ -40,6 +40,7 @@ Skips live hardware, `mVolt+`, `powercfg`, and `SensorCli` execution checks whil
 | **1. AST Syntax Parsing** | `AST Syntax: <script>` | Parses every `.ps1` file in [`scripts/`](../scripts/), [`profiles/`](../profiles/), and [`tests/`](../tests/) via `[System.Management.Automation.Language.Parser]::ParseFile` and fails on any syntax error. |
 | **2. Static Policy Guards** | `No hardcoded user scratch paths` | Ensures no machine-specific paths (e.g. `\.gemini\antigravity\scratch`) are reintroduced into any script. |
 | | `No deprecated mVolt+ flags` | Ensures removed/nonexistent `mVolt+` CLI flags (`--info`, `--reset`) are never called in scripts. (See [`docs/gpu-tuning-guide.md`](gpu-tuning-guide.md) and [`scripts/MvoltHelpers.ps1`](../scripts/MvoltHelpers.ps1).) |
+| | `FurMark calls use supported flags` | Ensures scripts don't reintroduce FurMark 2 flags that FurMark doesn't support (`--Windowed`, `-o`, `--log-score`, `--log-gpu-data-polling-factor`) or pass milliseconds to `--max-time` (which takes seconds). Benchmarks use `--duration-ms`. |
 | | `.gitignore un-ignores tools/bin/.gitkeep` | Verifies [`.gitignore`](../.gitignore) keeps the `!tools/bin/` + `tools/bin/*` + `!tools/bin/.gitkeep` negation pattern and that `tools/bin/.gitkeep` exists on disk. |
 | | `All relative Markdown links resolve` | Scans [`README.md`](../README.md), [`AGENTS.md`](../AGENTS.md), and every file under [`docs/`](../docs/) to verify all relative Markdown links resolve to existing files or directories. |
 | **3. Bootstrap & Build** | `Bootstrap-Tools.ps1 & SensorCli build` | Runs [`scripts/Bootstrap-Tools.ps1`](../scripts/Bootstrap-Tools.ps1) (without `-DownloadMissing`) and verifies [`tools/SensorCli/SensorCli.csproj`](../tools/SensorCli/SensorCli.csproj) compiles cleanly in `Release` mode. (See [`docs/prerequisites-and-setup.md`](prerequisites-and-setup.md).) |

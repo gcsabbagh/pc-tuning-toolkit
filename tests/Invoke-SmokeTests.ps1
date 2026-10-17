@@ -66,6 +66,13 @@ Run-Test "Static Check: No deprecated mVolt+ flags (--info / --reset) in scripts
     }
 }
 
+Run-Test "Static Check: FurMark calls use supported flags (--duration-ms, no -o/--Windowed/--log-score)" {
+    $hits = Select-String -Path (Join-Path $RepoRoot "scripts\*.ps1"), (Join-Path $RepoRoot "profiles\*\*.ps1") -Pattern "--Windowed|--log-score|--log-gpu-data-polling-factor|\s-o\s+\`$csv|--max-time\s+\`$DurationMs" -CaseSensitive
+    if ($hits) {
+        throw "Found unsupported FurMark flag in: $(($hits | ForEach-Object { "$($_.Filename):$($_.LineNumber)" }) -join ', ')"
+    }
+}
+
 Run-Test "Static Check: .gitignore un-ignores tools/bin/.gitkeep properly" {
     $gi = Get-Content (Join-Path $RepoRoot ".gitignore") -Raw
     if ($gi -notmatch "!tools/bin/" -or $gi -notmatch "tools/bin/\*" -or $gi -notmatch "!tools/bin/\.gitkeep") {

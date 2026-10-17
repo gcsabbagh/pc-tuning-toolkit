@@ -1,0 +1,4 @@
+"Label","Run","Time","Demo","Score","MinFps","AvgFps","MaxFps","AvgCoreMHz","MaxCoreMHz","VramMHz","MaxTempC","MaxVramC","ScannerLog"
+"verify_gemini_v1","1","2026-10-17 01:08:03","furmark-knot-vk","2313","65","76","80","2848","2850","24405","65","54",""
+"verify_gemini_v1","2","2026-10-17 01:08:54","furmark-knot-vk","2296","63","76","78","2845","2850","24405","67","58",""
+"verify_gemini_v1","3","2026-10-17 01:09:46","furmark-knot-vk","2319","63","76","79","2838","2850","24405","65","60",""

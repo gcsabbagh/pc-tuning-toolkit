@@ -30,7 +30,7 @@ Before touching a single clock slider, run [`scripts/Inspect-System.ps1`](../scr
 
 ### Step 2: Establish a Clean, Reproducible Baseline
 - Reset GPU clocks to factory default (`Run-GpuBenchmark.ps1 -ResetToDefault`, which writes stock offsets + 100% power via mVolt+ and verifies them with `--status`; mVolt+ itself has no `--reset` flag).
-- Run a standardized 20-second Vulkan load (`Run-GpuBenchmark.ps1`) and a 20-second native Scalar + AVX2 CPU load (`SensorCli.exe --stress`).
+- Run a standardized 30-second FurMark 2 Knot (Vulkan) load 3 times (`Run-GpuBenchmark.ps1 -Runs 3`) and a native Scalar + AVX2 CPU load (`SensorCli.exe --stress`). The baseline's run-to-run spread is the noise floor: smaller score differences later on are not real.
 - Record **Score, Min/Avg/Max FPS, Effective Clocks, Temperatures (Core, Hotspot, VRAM, Package, DIMMs), and Power Draw**.
 
 ### Step 3: Tune One Subsystem at a Time
@@ -42,6 +42,8 @@ Never change Core, Crossbar, Memory, and CPU settings all at once.
 
 ### Step 4: Apply the "Multiplayer Safety Buffer"
 Once you find the highest setting that passes synthetic stress + artifact scanning cleanly, **step back by 1–2 bins** (`-15` to `-30 MHz` on GPU Core, `-30` to `-60 MHz` on GPU Crossbar, `-150` to `-250 MHz` on VRAM) to account for transient gaming spikes and high-voltage boost bins.
+
+Then validate the backed-off GPU profile under **changing** load with OCCT 3D Adaptive (Variable, then Switch mode) and check `Diagnose-Crashes.ps1` afterward (see [GPU Tuning Guide, Step 4](gpu-tuning-guide.md#step-4-validate-under-changing-load-occt-3d-adaptive)). FurMark only shows how the profile performs under steady maximum load; it cannot show stability during load transitions.
 
 ### Step 5: Real-World Validation & Persistence
 Save the verified profile to auto-apply at Windows startup, have the user play their actual multiplayer game, and run `Diagnose-Crashes.ps1` afterward to verify zero hardware or driver warnings.
