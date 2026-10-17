@@ -9,3 +9,6 @@ date,demo,platform,vendor,renderer,api_version,width,height,fullscreen,antialias
 2026.10.16@20:55:30,furmark-knot-vk,Windows 64-bit,NVIDIA,NVIDIA GeForce RTX 4080,Vulkan 1.4.351,2560,1440,NO,Off,5,397,-1,78,72,81
 2026.10.16@20:56:28,furmark-vk,Windows 64-bit,NVIDIA,NVIDIA GeForce RTX 4080,Vulkan 1.4.351,2560,1440,NO,Off,20,1957,-1,97,78,102
 2026.10.16@23:02:04,furmark-knot-vk,Windows 64-bit,NVIDIA,NVIDIA GeForce RTX 4080,Vulkan 1.4.351,2560,1440,NO,Off,30,2175,-1,72,66,74
+2026.10.17@01:08:03,furmark-knot-vk,Windows 64-bit,NVIDIA,NVIDIA GeForce RTX 4080,Vulkan 1.4.351,2560,1440,NO,Off,30,2313,-1,76,65,80
+2026.10.17@01:08:54,furmark-knot-vk,Windows 64-bit,NVIDIA,NVIDIA GeForce RTX 4080,Vulkan 1.4.351,2560,1440,NO,Off,30,2296,-1,76,63,78
+2026.10.17@01:09:46,furmark-knot-vk,Windows 64-bit,NVIDIA,NVIDIA GeForce RTX 4080,Vulkan 1.4.351,2560,1440,NO,Off,30,2319,-1,76,63,79

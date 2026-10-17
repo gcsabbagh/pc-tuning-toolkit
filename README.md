@@ -54,8 +54,8 @@ All required runtimes, drivers, and benchmarking tools can be installed automati
 | **`.NET 8 SDK` + `.NET 10 Runtime`** | **Yes** | Compiles and executes [`tools/SensorCli/`](tools/SensorCli/Program.cs) (`dotnet build` + `.NET 10` runtime roll-forward for `LibreHardwareMonitorLib.dll`). | `winget install Microsoft.DotNet.SDK.8`<br>`winget install Microsoft.DotNet.DesktopRuntime.10` |
 | **FanControl (`LibreHardwareMonitorLib.dll` + `PawnIO`)** | **Yes** | Provides `LibreHardwareMonitorLib.dll` (`v0.9.6+`) and the Microsoft-signed **`PawnIO` kernel driver** so `SensorCli.exe` can read Intel & AMD Ryzen X3D per-core temps, clocks, `Vcore`/`VSOC`, Package Power, and DDR5 DIMM sensors **even with Windows VBS / Memory Integrity ON**. | `winget install Rem0o.FanControl` |
 | **`mVolt+` (`v0.50.4+`)** | **Yes (NVIDIA)** | Lightweight NVAPI CLI + GUI tuner for NVIDIA RTX 30/40/50-series GPUs (`--power-cap-watts`, `--core`, `--xbar-offset`, `--mem`). | Auto-downloaded from [`b00nz/mVolt`](https://github.com/b00nz/mVolt/releases/latest) by `Bootstrap-Tools.ps1 -DownloadMissing` |
-| **FurMark 2 (`v2.10+` x64)** | **Yes (GPU Bench)** | Scriptable Vulkan CLI benchmark (`furmark.exe --demo furmark-vk --benchmark`) with real-time **GPU Artifact Scanner (`--artifact-scanner`)** and CSV telemetry logger. | `winget install Geeks3D.FurMark.2` |
-| **OCCT Personal** | *Optional* | Useful for extended per-core AMD Curve Optimizer (CO) core-cycling validation and 3D Adaptive transient tests. | `winget install OCBase.OCCT.Personal` |
+| **FurMark 2 (`v2.10+` x64)** | **Yes (GPU Bench)** | Scriptable Vulkan CLI benchmark (`furmark.exe --demo furmark-knot-vk --benchmark`) with real-time **GPU Artifact Scanner (`--artifact-scanner`)** and CSV telemetry logger. | `winget install Geeks3D.FurMark.2` |
+| **OCCT Personal** | **Recommended** | **3D Adaptive** variable-load GPU stability validation (run from the GUI) and per-core AMD Curve Optimizer (CO) core cycling. | `winget install OCBase.OCCT.Personal` |
 | **Process Lasso** | *Optional* | Used to pin background apps (`discord.exe`, browsers, OBS) to Intel E-cores or AMD secondary CCDs and manage power plans. | `winget install Bitsum.ProcessLasso` |
 
 ### Manual One-Liner Prerequisite Install (`winget`)
@@ -88,8 +88,8 @@ Open this repository in your AI coding assistant and prompt:
 # 4. Run a 20-second CPU Scalar + AVX2+FMA stress & thermal check
 .\tools\SensorCli\bin\Release\net8.0\SensorCli.exe --stress 18
 
-# 5. Run a 20-second GPU Vulkan Knot benchmark with artifact scanning
-.\scripts\Run-GpuBenchmark.ps1 -Label "baseline" -ResetToDefault
+# 5. Run three 30-second FurMark 2 Knot (Vulkan) passes with artifact scanning and report mean/spread
+.\scripts\Run-GpuBenchmark.ps1 -Label "baseline" -ResetToDefault -Runs 3
 
 # 6. Run the non-destructive smoke & regression test suite after modifying any scripts
 .\tests\Invoke-SmokeTests.ps1

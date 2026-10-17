@@ -44,9 +44,9 @@ Welcome, Agent. This repository is an **Agentic PC Tuning & Stability Toolkit** 
    - Consult [`docs/crash-diagnostics-guide.md`](docs/crash-diagnostics-guide.md) to interpret any findings.
 
 ### Phase 3: Baseline Telemetry & Stress Testing
-1. **GPU Baseline:** Reset GPU to factory stock (`-ResetToDefault` writes 0 offsets + 100% power via mVolt+ and verifies with `--status`; mVolt+ has no `--reset` flag) and run a 20-second FurMark 2 Vulkan Knot benchmark with the artifact scanner enabled:
+1. **GPU Baseline:** Reset GPU to factory stock (`-ResetToDefault` writes 0 offsets + 100% power via mVolt+ and verifies with `--status`; mVolt+ has no `--reset` flag) and run three 30-second FurMark 2 Knot (`furmark-knot-vk`) passes with the artifact scanner enabled. The reported spread across runs is the noise floor for every later comparison:
    ```powershell
-   .\scripts\Run-GpuBenchmark.ps1 -Label "baseline" -ResetToDefault
+   .\scripts\Run-GpuBenchmark.ps1 -Label "baseline" -ResetToDefault -Runs 3
    ```
 2. **CPU & Thermal Baseline:** Run the native multi-threaded Scalar + AVX2+FMA stress test in `SensorCli.exe`:
    ```powershell
@@ -55,7 +55,7 @@ Welcome, Agent. This repository is an **Agentic PC Tuning & Stability Toolkit** 
    - Check idle vs. load **Package Power (W)**, **Vcore / VSOC (V)**, **Core & Package Temperatures (°C)**, **Per-Core Boost Clocks (MHz)**, and **DDR5 DIMM Temperatures (°C)**.
 
 ### Phase 4: Iterative GPU & CPU Tuning
-1. Follow [`docs/gpu-tuning-guide.md`](docs/gpu-tuning-guide.md) to tune the GPU via `mVolt+` (Power Limit $\rightarrow$ VRAM ECC sweet spot $\rightarrow$ Core & Crossbar `XBar` sweep $\rightarrow$ back off to the Rock-Solid Gaming profile).
+1. Follow [`docs/gpu-tuning-guide.md`](docs/gpu-tuning-guide.md) to tune the GPU via `mVolt+` (Power Limit $\rightarrow$ VRAM ECC sweet spot $\rightarrow$ Core & Crossbar `XBar` sweep $\rightarrow$ back off to the Rock-Solid Gaming profile $\rightarrow$ validate under changing load with OCCT 3D Adaptive). FurMark passes do **not** prove stability; the user must run OCCT 3D Adaptive from its GUI (no CLI in OCCT Personal), then run `.\scripts\Diagnose-Crashes.ps1 -HoursBack 2`.
 2. Follow [`docs/cpu-tuning-guide.md`](docs/cpu-tuning-guide.md) to optimize CPU power management (`.\scripts\Manage-CpuPowerPlan.ps1 -Action ApplySmartHighPerf`), Process Lasso hybrid/CCD affinities, and BIOS PBO Curve Optimizer / undervolt recommendations.
 
 ### Phase 5: Persistence & Real-World Gaming Validation

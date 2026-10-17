@@ -55,21 +55,36 @@ This guide covers safe, high-stability GPU optimization using **`mVolt+`** (`b00
 
 ### Step 2: Run Stock Baseline
 ```powershell
-.\scripts\Run-GpuBenchmark.ps1 -Label "00_stock_baseline" -ResetToDefault
+.\scripts\Run-GpuBenchmark.ps1 -Label "00_stock_baseline" -ResetToDefault -Runs 3
 ```
-Record the baseline **FurMark 2 Score**, **Min/Avg/Max FPS**, **Sustained Core Clock (MHz)**, **Core/Hotspot/VRAM Temps (°C)**, and **Power Draw (W)**.
+Each run is a 30-second FurMark 2 Knot (`furmark-knot-vk`) pass at `2560×1440` with the artifact scanner on. The script reports each run's **FurMark 2 Score**, **Min/Avg/Max FPS**, **Avg/Max Core Clock**, **VRAM Clock**, and **Core/VRAM Temps**, then the **mean / min / max / stdev / spread %** across runs. Results are saved to `tools\bin\fm_<Label>_summary.csv`.
+
+The baseline's run-to-run spread is your noise floor: **a later change that moves the score by less than that spread is not a real difference.**
 
 ### Step 3: Unlock Power Cap & Sweep Memory + Core/XBar
-Run controlled 20-second passes with the Vulkan Artifact Scanner enabled:
+Run controlled passes with the artifact scanner enabled (a single run is fine while sweeping; repeat with `-Runs 3` to confirm any candidate profile):
 ```powershell
 # Example Pass 1: Max Power + Conservative Core/XBar/Mem
 .\scripts\Run-GpuBenchmark.ps1 -Label "01_step1" -PowerWatts 400 -CoreOffset 60 -XbarOffset 120 -MemOffset 1000
 ```
-- Verify `0` artifacts detected by FurMark 2 (`--artifact-scanner`).
+- Check the script output for any `[ARTIFACT SCANNER]` lines.
 - Verify `0` events in `.\scripts\Diagnose-Crashes.ps1 -HoursBack 1`.
-- Compare effective Core Clock (`MHz`) and FPS against the baseline.
+- Compare score, FPS and effective Core Clock (`MHz`) against the baseline.
 
-### Step 4: Save & Persist in `mVolt+`
+> **FurMark measures performance, not gaming stability.** It is a steady, maximum load that holds the GPU in lower, power-limited boost bins. A profile can pass every FurMark run and still crash in games when lighter scenes let the GPU boost to its highest voltage/frequency bins (see [Case Study #1](case-studies/01-i7-13700k-rtx4080-gigabyte.md), Pass 4). Use Step 4 to validate stability.
+
+### Step 4: Validate Under Changing Load (OCCT 3D Adaptive)
+OCCT's **3D Adaptive** test (free in OCCT Personal) varies GPU load instead of holding it at maximum, which reaches the mid-intensity range where boost clocks climb highest and unstable V/F points tend to fail. It also has built-in error detection.
+
+OCCT Personal has no documented command-line control for this test, so **the user runs it from the GUI**:
+1. Install if needed: `winget install OCBase.OCCT.Personal`.
+2. Apply the candidate profile, then open OCCT on the user's desktop with [`scripts/Launch-InteractiveGui.ps1`](../scripts/Launch-InteractiveGui.ps1) `-ExecutablePath "<path to OCCT.exe>"`.
+3. Have the user run **3D Adaptive** in **Variable** mode (load steps up through the intensity range) for at least one full ramp, then a shorter pass in **Switch** mode (abrupt high/low load transients).
+4. Afterward run `.\scripts\Diagnose-Crashes.ps1 -HoursBack 2`.
+
+Any OCCT-reported error, `nvlddmkm` event, or `Display 4101` event means the profile is not stable: back off one bin (`-15 MHz` Core, `-30 MHz` XBar) and repeat. Passing OCCT does not replace the real multiplayer session in Phase 5; it filters out unstable profiles before the user spends a gaming session on them.
+
+### Step 5: Save & Persist in `mVolt+`
 Once the **Rock-Solid Gaming** values are chosen and verified:
 1. Apply the final settings via CLI.
 2. Launch the `mVolt+` GUI onto the user's desktop using [`scripts/Launch-InteractiveGui.ps1`](../scripts/Launch-InteractiveGui.ps1):
