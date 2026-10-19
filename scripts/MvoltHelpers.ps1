@@ -54,5 +54,9 @@ function Show-MvoltStatus {
     Write-Host ("GPU: {0} | Profile: {1} | Power: {2}% ({3} W enforced) | Core: {4:+0;-0;0} MHz | XBar: {5:+0;-0;0} MHz | Mem: {6:+0;-0;0} MHz" -f `
         $st.gpu, $st.active_profile, $st.power_limit_percent, ($st.power_limits.enforced_mw / 1000),
         $st.core_offset_mhz, $st.xbar_offset_mhz, $st.memory_offset_mhz) -ForegroundColor Cyan
+    if ($st.power_client -and $st.power_client.managed_cap -and $st.power_client.fe_mw -lt $st.power_client.f8_mw) {
+        Write-Warning ("mVolt+ watt-cap lease (0xF8 = {0} W) is active while NVML power limit (0xFE = {1} W) is lower; hardware enforces {1} W. Use '--return-to-percentage' then '--power <percent>' to raise the ceiling." -f `
+            ($st.power_client.f8_mw / 1000), ($st.power_client.fe_mw / 1000))
+    }
     return $st
 }

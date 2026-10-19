@@ -33,9 +33,9 @@ if (-not $SkipGpuCheck) {
     }
 }
 
-$mArgs = @("--power-cap-watts", 400, "--core", 60, "--clock-range", "default", "--xbar-offset", 120, "--mem", 1000)
+$mArgs = @("--power", 117, "--core", 60, "--clock-range", "default", "--xbar-offset", 120, "--mem", 1000)
 Write-Host "mVolt+: $mvolt" -ForegroundColor Cyan
-Write-Host "Command: mVolt+ $($mArgs -join ' ')" -ForegroundColor Cyan
+Write-Host "Command: mVolt+ --return-to-percentage ; mVolt+ $($mArgs -join ' ')" -ForegroundColor Cyan
 if ($DryRun) {
     Write-Host "Current state:" -ForegroundColor Gray
     [void](Show-MvoltStatus -MvoltPath $mvolt)
@@ -44,6 +44,7 @@ if ($DryRun) {
 }
 
 try {
+    Invoke-Mvolt $mvolt @("--return-to-percentage")
     Invoke-Mvolt $mvolt $mArgs
 } catch {
     Write-Error $_

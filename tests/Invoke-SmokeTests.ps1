@@ -73,6 +73,22 @@ Run-Test "Static Check: FurMark calls use supported flags (--duration-ms, no -o/
     }
 }
 
+Run-Test "Static Check: GPU profile scripts & JSONs use percentage power (--power) to raise VBIOS limits" {
+    $profHits = Select-String -Path (Join-Path $RepoRoot "profiles\*\*.ps1") -Pattern "--power-cap-watts"
+    if ($profHits) {
+        throw "Profile script uses --power-cap-watts (0xF8 lease) instead of --power (0xFE): $($profHits.Path -join ', ')"
+    }
+    $jsonFiles = Get-ChildItem -Path (Join-Path $RepoRoot "profiles\*\mvolt-*.json") -File
+    foreach ($jf in $jsonFiles) {
+        $j = Get-Content -LiteralPath $jf.FullName -Raw | ConvertFrom-Json
+        foreach ($p in $j.profiles) {
+            if ($p.controls.power.percent -gt 100 -and (-not $p.controls.power.enabled -or $p.controls.power_cap.enabled)) {
+                throw "$($jf.Name) profile '$($p.name)' has power.percent=$($p.controls.power.percent) but power.enabled=$($p.controls.power.enabled) / power_cap.enabled=$($p.controls.power_cap.enabled)."
+            }
+        }
+    }
+}
+
 Run-Test "Static Check: .gitignore un-ignores tools/bin/.gitkeep properly" {
     $gi = Get-Content (Join-Path $RepoRoot ".gitignore") -Raw
     if ($gi -notmatch "!tools/bin/" -or $gi -notmatch "tools/bin/\*" -or $gi -notmatch "!tools/bin/\.gitkeep") {

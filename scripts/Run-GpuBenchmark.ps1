@@ -22,6 +22,7 @@ param(
     [ValidateRange(1, 10)]
     [int]$Runs = 1,
     [int]$CooldownSec = 15,
+    [int]$PowerPercent = 0,
     [int]$PowerWatts = 0,
     [int]$CoreOffset = -9999,
     [int]$XbarOffset = -9999,
@@ -54,8 +55,13 @@ if ($mvolt) {
             Invoke-Mvolt $mvolt @("--return-to-percentage", "--core", 0, "--mem", 0, "--xbar-offset", 0, "--sys-offset", 0, "--video-offset", 0, "--boost", 0, "--clock-range", "default")
             Invoke-Mvolt $mvolt @("--power", 100)
         } else {
+            if ($PowerPercent -gt 0) {
+                # Release any active 0xF8 watt-cap lease first (--return-to-percentage and --power are mutually exclusive)
+                Invoke-Mvolt $mvolt @("--return-to-percentage")
+            }
             $mArgs = @()
-            if ($PowerWatts -gt 0) { $mArgs += @("--power-cap-watts", $PowerWatts) }
+            if ($PowerPercent -gt 0) { $mArgs += @("--power", $PowerPercent) }
+            elseif ($PowerWatts -gt 0) { $mArgs += @("--power-cap-watts", $PowerWatts) }
             if ($CoreOffset -ne -9999) { $mArgs += @("--core", $CoreOffset, "--clock-range", "default") }
             if ($XbarOffset -ne -9999) { $mArgs += @("--xbar-offset", $XbarOffset) }
             if ($MemOffset -ne -9999) { $mArgs += @("--mem", $MemOffset) }
@@ -74,7 +80,7 @@ if ($mvolt) {
         Write-Error "GPU is NOT at stock after reset; refusing to record a misleading baseline."
         return
     }
-} elseif ($ResetToDefault -or $PowerWatts -gt 0 -or $CoreOffset -ne -9999 -or $XbarOffset -ne -9999 -or $MemOffset -ne -9999) {
+} elseif ($ResetToDefault -or $PowerPercent -gt 0 -or $PowerWatts -gt 0 -or $CoreOffset -ne -9999 -or $XbarOffset -ne -9999 -or $MemOffset -ne -9999) {
     Write-Error "mVolt+.exe not found but GPU settings were requested. Run .\scripts\Bootstrap-Tools.ps1 -DownloadMissing."
     return
 }

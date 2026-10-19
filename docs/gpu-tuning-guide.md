@@ -14,6 +14,9 @@ This guide covers safe, high-stability GPU optimization using **`mVolt+`** (`b00
    - **Dedicated Crossbar (`XBar`) Domain Control (`--xbar-offset <MHz>`):** Modern NVIDIA GPUs have a separate **Crossbar (`XBar` / L2 interconnect)** clock domain that connects GPCs (Graphics Processing Clusters) to the L2 cache and memory controllers. Boosting `XBar` (`+90` to `+150 MHz`) improves L2 cache bandwidth and 1% low frame times without requiring unstable shader core clocks.
    - **Full CLI Automation:** Agents can query `--status` (JSON), apply offsets, and reset to defaults (`Run-GpuBenchmark.ps1 -ResetToDefault`) cleanly from PowerShell.
    - **PowerShell gotcha:** `mVolt+.exe` is a GUI-subsystem binary. Called bare, PowerShell does not wait for it and silently drops its output and exit code (including `{"success":false,...}` errors). Always pipe its output (e.g. `& $mvolt --status | Out-String`) or use `Invoke-Mvolt` from [`scripts/MvoltHelpers.ps1`](../scripts/MvoltHelpers.ps1).
+   - **Power Limit (`--power`) vs. Power Cap (`--power-cap-watts`) gotcha:** NVIDIA's hardware arbiter enforces the *lower* of two independent power clients (`min(Client 0xFE, Client 0xF8)`):
+     - **`--power <PERCENT>` (Client `0xFE` / NVML Power Limit %):** Use this to raise the board power limit above `100%` up to the VBIOS maximum (e.g. `--power 117` for `400 W` on RTX 4080).
+     - **`--power-cap-watts <WATTS>` (Client `0xF8` Watt-Cap Lease):** Creates a persistent watt-cap lease (`power-cap-pci-*.txt`, `managed_cap: true`) intended for *lowering* a card's wattage cap. Setting `--power-cap-watts 400` while `--power` is still at `100%` (`340 W`) leaves `fe_mw = 340,000` (`Current Power Limit: 340.00 W` in `nvidia-smi` / GPU-Z `Pwr` cap) **and** locks out the **Power (`%`)** tile in the `mVolt+` GUI until `--return-to-percentage` is called. Always call `--return-to-percentage` before `--power <PERCENT>` when raising the power ceiling.
 
 ---
 
@@ -38,7 +41,7 @@ This guide covers safe, high-stability GPU optimization using **`mVolt+`** (`b00
 * **Core & Crossbar (`XBar`) Offsets:**
   * Blackwell `GB203` clocks significantly higher out of the box (`2,800–2,950 MHz` stock boost, scaling to **`3,100–3,225 MHz`** tuned).
   * **Step 1 (Baseline):** Check stock boost clock in FurMark 2 Knot (`Run-GpuBenchmark.ps1 -ResetToDefault`) and inspect the peak voltage boost bin in a light workload.
-  * **Step 2 (Synthetic Sweep):** Unlock `--power-cap-watts` to max VBIOS limit, then test `--core` in `+30 MHz` increments (`+60`, `+90`, `+120`, `+150`) alongside `--xbar-offset` (`+90`, `+120`, `+150`, `+180`).
+  * **Step 2 (Synthetic Sweep):** Release any watt cap (`--return-to-percentage`) and unlock `--power` to max VBIOS percentage (`power_limit_percent_limit_max`), then test `--core` in `+30 MHz` increments (`+60`, `+90`, `+120`, `+150`) alongside `--xbar-offset` (`+90`, `+120`, `+150`, `+180`).
   * **Step 3 (Multiplayer Safe Profile):** Back off **`-30 MHz` on Core** and **`-30 to -45 MHz` on `XBar`** from the highest artifact-free synthetic run so transient boosts above `3,150+ MHz` never trigger `nvlddmkm` TDRs in UE5 titles.
 
 ---
@@ -61,11 +64,11 @@ Each run is a 30-second FurMark 2 Knot (`furmark-knot-vk`) pass at `2560×1440` 
 
 The baseline's run-to-run spread is your noise floor: **a later change that moves the score by less than that spread is not a real difference.**
 
-### Step 3: Unlock Power Cap & Sweep Memory + Core/XBar
+### Step 3: Unlock Power Limit & Sweep Memory + Core/XBar
 Run controlled passes with the artifact scanner enabled (a single run is fine while sweeping; repeat with `-Runs 3` to confirm any candidate profile):
 ```powershell
-# Example Pass 1: Max Power + Conservative Core/XBar/Mem
-.\scripts\Run-GpuBenchmark.ps1 -Label "01_step1" -PowerWatts 400 -CoreOffset 60 -XbarOffset 120 -MemOffset 1000
+# Example Pass 1: Max Power (117% = 400W) + Conservative Core/XBar/Mem
+.\scripts\Run-GpuBenchmark.ps1 -Label "01_step1" -PowerPercent 117 -CoreOffset 60 -XbarOffset 120 -MemOffset 1000
 ```
 - Check the script output for any `[ARTIFACT SCANNER]` lines.
 - Verify `0` events in `.\scripts\Diagnose-Crashes.ps1 -HoursBack 1`.

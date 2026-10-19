@@ -44,6 +44,11 @@ Each pass was a 30-second FurMark 2 Knot run (`--demo furmark-knot-vk --duration
 - While `+90 MHz Core / +150 MHz XBar` passed FurMark 2 at `2,865 MHz` (`1.015 V`), in actual gameplay (`Invokyr`), lighter rendering moments allowed GPU Boost to climb to its highest `1.075 V` voltage bin (`~2,940+ MHz`), triggering an `nvlddmkm` Event ID 153 reset after 6 minutes.
 - Stepping down 2 boost bins to **`+60 MHz Core / +120 MHz XBar / +1,000 MHz VRAM` (`Gemini v1.0`)** scores `2,309` (`76` avg FPS, mean of 3 runs) with `200 MHz` less memory overclock than the prior Afterburner setup, while capping peak in-game transient boost at a rock-solid **`2,895–2,910 MHz`**, which subsequently ran **90+ minutes of multiplayer `Invokyr` with zero crashes or driver warnings**.
 
+### D. Power Limit (`117%` / Client `0xFE`) vs. Power Cap (`400 W` / Client `0xF8`)
+- Initially, saving the profile with `--power-cap-watts 400` (`power_cap` enabled, `power` disabled) created an `mVolt+` `0xF8` watt-cap lease (`f8_mw = 400,000`, `managed_cap: true`) while leaving standard NVML Client `0xFE` (`fe_mw` / `enforced_mw`) at the stock `100%` (`340,000 mW` = `340 W`).
+- Because NVIDIA's hardware arbiter enforces `min(Client 0xFE, Client 0xF8)`, the GPU was still hitting a `340.00 W` ceiling (`Pwr` PerfCap reason in GPU-Z) and `mVolt+` locked the **Power (`%`)** tile in the GUI while the `0xF8` lease was active.
+- Releasing the watt-cap lease (`--return-to-percentage`) and enabling `"power": {"enabled": true, "percent": 117}` (`--power 117`) in [`mvolt-gemini-v1.0-profile.json`](../../profiles/i7-13700k-rtx4080/mvolt-gemini-v1.0-profile.json) and [`Apply-Gemini-v1.0-4080.ps1`](../../profiles/i7-13700k-rtx4080/Apply-Gemini-v1.0-4080.ps1) sets both `fe_mw` and `f8_mw` to **`400,000 mW` (`400.00 W`)**, confirmed via `nvidia-smi -q -d POWER` (`Current Power Limit: 400.00 W`).
+
 ---
 
 ## 3. Part 2: CPU, DDR5 & Power Plan Optimization (`i7-13700K`)
