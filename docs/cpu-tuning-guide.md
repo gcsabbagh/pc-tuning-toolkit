@@ -83,3 +83,4 @@ This keeps **Core Parking 100% disabled** (`CPMINCORES = 100%`) so no cores ever
 On Intel Hybrid CPUs (e.g., `i7-13700K` where `Threads 0–15` are the 8 hyper-threaded P-Cores and `Threads 16–23` are the 8 E-Cores):
 - Pin background chat/browsers/capture (`discord.exe`, `msedge.exe`, `chrome.exe`) to **E-Cores (`16–23`)**.
 - Keep multiplayer games on **P-Cores (`0–15`)** with **Efficiency Mode = OFF**.
+- Full rule set (per-game template, launcher inheritance, Sunshine/Apollo on E-Cores): [`profiles/i7-13700k-rtx4080/process-lasso-rules.md`](../profiles/i7-13700k-rtx4080/process-lasso-rules.md).
