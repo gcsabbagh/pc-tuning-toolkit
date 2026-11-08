@@ -26,8 +26,15 @@ if ($Arguments) { $ActionParams.Argument = $Arguments }
 
 $Action = New-ScheduledTaskAction @ActionParams
 $Principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
-Register-ScheduledTask -TaskName $TaskName -Action $Action -Principal $Principal -Force | Out-Null
-Start-ScheduledTask -TaskName $TaskName
+try {
+    # -RunLevel Highest requires an elevated shell; without Admin this throws "Access is denied".
+    Register-ScheduledTask -TaskName $TaskName -Action $Action -Principal $Principal -Force -ErrorAction Stop | Out-Null
+    Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+} catch {
+    Write-Error "Failed to launch '$ExecutablePath' via scheduled task (is this shell elevated?): $($_.Exception.Message)"
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+    exit 1
+}
 Start-Sleep -Seconds 2
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 Write-Host "Launched '$ExecutablePath' onto interactive desktop session for $env:USERNAME." -ForegroundColor Green
