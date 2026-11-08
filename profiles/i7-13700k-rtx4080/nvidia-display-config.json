@@ -1,0 +1,4 @@
+{
+  "pg27uqr": { "vsync": "on", "frameCap": 155 },
+  "apolloVirtDisplay": { "vsync": "off", "frameCap": { "fromClientFps": -3, "min": 30 } }
+}

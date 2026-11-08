@@ -15,6 +15,7 @@ This document lists every runtime, kernel driver, library, and benchmarking tool
 | **FurMark 2 (`v2.10+` x64)** | **Yes (GPU Bench)** | Provides a fully scriptable Vulkan CLI benchmark (`furmark.exe --demo furmark-knot-vk --benchmark`) with a built-in **real-time GPU Artifact Scanner (`--artifact-scanner`)** and per-second CSV sensor logger (`--log-gpu-data`). | `winget install Geeks3D.FurMark.2` *(or portable extraction via `Bootstrap-Tools.ps1`)* |
 | **NVIDIA Driver (`nvidia-smi`)** | **Yes (NVIDIA)** | Included with standard NVIDIA Game Ready / Studio drivers (`C:\Windows\System32\nvidia-smi.exe`). Used to query VBIOS versions and default/max power limits. | Included with NVIDIA Display Driver |
 | **OCCT Personal** | **Recommended** | **3D Adaptive** variable-load GPU stability validation (GUI only; OCCT Personal has no documented CLI for it) and per-core AMD Curve Optimizer (CO) core cycling. | `winget install OCBase.OCCT.Personal` |
+| **NVIDIA Profile Inspector (`v3.0.2.1+`)** | *Optional* | Silently imports `.nip` driver profiles (`-silentImport`) to switch global V-Sync / Frame Rate Limiter between local G-Sync play and Apollo/Sunshine streaming (see [`gpu-tuning-guide.md`](gpu-tuning-guide.md#4-streaming-with-apollo--sunshine-g-sync-v-sync-switch)). Requires Admin. | GitHub: [`Orbmu2k/nvidiaProfileInspector`](https://github.com/Orbmu2k/nvidiaProfileInspector/releases/latest) *(Auto-downloaded to `tools\bin\nvinspect\` by `Bootstrap-Tools.ps1`)* |
 | **Process Lasso** | *Optional* | Used to pin background apps (`discord.exe`, browsers, OBS) to Intel E-cores or AMD secondary CCDs while keeping games on primary P-cores / 3D V-Cache CCDs. | `winget install Bitsum.ProcessLasso` |
 
 ---
@@ -36,6 +37,7 @@ On a brand-new PC, open **PowerShell as Administrator** inside the repository ro
 4. **Builds `SensorCli.exe`:** Compiles [`tools/SensorCli/SensorCli.csproj`](../tools/SensorCli/SensorCli.csproj) in `Release` mode and runs a 1-second sensor sanity check.
 5. **Downloads `mVolt+.exe`:** Queries the GitHub Releases API for `b00nz/mVolt` and downloads `mVolt+.exe` directly into `tools\bin\mVolt+.exe`.
 6. **Checks / Installs `FurMark 2`:** Checks standard install paths (`C:\Program Files\Geeks3D\FurMark2_x64\furmark.exe` or `tools\bin\FurMark2`) and installs `Geeks3D.FurMark.2` via `winget` if missing.
+7. **Downloads NVIDIA Profile Inspector (optional):** Queries the GitHub Releases API for `Orbmu2k/nvidiaProfileInspector` and extracts it into `tools\bin\nvinspect\` (used only by [`scripts/Set-NvDisplayConfig.ps1`](../scripts/Set-NvDisplayConfig.ps1) for streaming).
 
 ### Verify Your Setup with the Smoke Test Suite
 After bootstrapping, run the non-destructive smoke test suite (see [`docs/testing-and-verification.md`](testing-and-verification.md)) to confirm all scripts, tools, and hardware telemetry readers work end-to-end:

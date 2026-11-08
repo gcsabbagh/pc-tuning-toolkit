@@ -18,7 +18,7 @@ Hardware tuning scripts interact directly with ring-0 sensors (`PawnIO` / `Libre
 ## 2. How to Run the Smoke Test Suite
 
 ### Full Suite (Recommended — Run from an Administrator PowerShell)
-Runs all 23 static, build, and live read-only hardware/telemetry tests:
+Runs every static, build, and live read-only hardware/telemetry test:
 
 ```powershell
 .\tests\Invoke-SmokeTests.ps1
@@ -42,6 +42,7 @@ Skips live hardware, `mVolt+`, `powercfg`, and `SensorCli` execution checks whil
 | | `No deprecated mVolt+ flags` | Ensures removed/nonexistent `mVolt+` CLI flags (`--info`, `--reset`) are never called in scripts. (See [`docs/gpu-tuning-guide.md`](gpu-tuning-guide.md) and [`scripts/MvoltHelpers.ps1`](../scripts/MvoltHelpers.ps1).) |
 | | `FurMark calls use supported flags` | Ensures scripts don't reintroduce FurMark 2 flags that FurMark doesn't support (`--Windowed`, `-o`, `--log-score`, `--log-gpu-data-polling-factor`) or pass milliseconds to `--max-time` (which takes seconds). Benchmarks use `--duration-ms`. |
 | | `GPU profiles use percentage power (--power)` | Ensures GPU profile scripts and saved `mvolt-*.json` profiles use `--power` (`power.enabled: true`, `power_cap.enabled: false`) when raising board power above `100%` so NVML Client `0xFE` isn't left at `100%` under a `0xF8` watt-cap lease. |
+| | `nvidia-display-config.json resolve to Base Profile .nip files` | For every `profiles/*/nvidia-display-config.json`, checks that all displays list the same settings (import merges, so a setting only some displays list would leak across switches), then dry-runs [`scripts/Set-NvDisplayConfig.ps1`](../scripts/Set-NvDisplayConfig.ps1) for each display and verifies the generated `.nip` holds a single `Base Profile` with numeric `Dword` settings. |
 | | `.gitignore un-ignores tools/bin/.gitkeep` | Verifies [`.gitignore`](../.gitignore) keeps the `!tools/bin/` + `tools/bin/*` + '!tools/bin/.gitkeep' negation pattern and that `tools/bin/.gitkeep` exists on disk. |
 | | `All relative Markdown links resolve` | Scans [`README.md`](../README.md), [`AGENTS.md`](../AGENTS.md), and every file under [`docs/`](../docs/) to verify all relative Markdown links resolve to existing files or directories. |
 | **3. Bootstrap & Build** | `Bootstrap-Tools.ps1 & SensorCli build` | Runs [`scripts/Bootstrap-Tools.ps1`](../scripts/Bootstrap-Tools.ps1) (without `-DownloadMissing`) and verifies [`tools/SensorCli/SensorCli.csproj`](../tools/SensorCli/SensorCli.csproj) compiles cleanly in `Release` mode. (See [`docs/prerequisites-and-setup.md`](prerequisites-and-setup.md).) |
@@ -51,6 +52,7 @@ Skips live hardware, `mVolt+`, `powercfg`, and `SensorCli` execution checks whil
 | **6. Crash Forensics** | `Diagnose-Crashes.ps1` | Runs [`scripts/Diagnose-Crashes.ps1`](../scripts/Diagnose-Crashes.ps1) (`-HoursBack 24`) and verifies all 4 forensic sections (GPU TDRs, WHEA, Reboots/BugChecks, App Crashes) execute cleanly. (See [`docs/crash-diagnostics-guide.md`](crash-diagnostics-guide.md).) |
 | **7. CPU Power Plan** | `Manage-CpuPowerPlan.ps1` | Runs [`scripts/Manage-CpuPowerPlan.ps1`](../scripts/Manage-CpuPowerPlan.ps1) with `-Action Backup` to a temporary `.pow` file, verifies the file size (`>= 1 KB`), checks `-Action Status` output for `PERFEPP`, and removes the temporary file. (See [`docs/cpu-tuning-guide.md`](cpu-tuning-guide.md).) |
 | **8. Profile Validation** | `Apply-Gemini-v1.0-4080.ps1 -DryRun` | Runs [`profiles/i7-13700k-rtx4080/Apply-Gemini-v1.0-4080.ps1`](../profiles/i7-13700k-rtx4080/Apply-Gemini-v1.0-4080.ps1) with `-DryRun -SkipGpuCheck` to verify privilege, binary, and status checks without writing to the GPU. (See [`docs/case-studies/01-i7-13700k-rtx4080-gigabyte.md`](case-studies/01-i7-13700k-rtx4080-gigabyte.md).) |
+| | `Set-NvDisplayConfig.ps1 -DryRun` | Runs [`scripts/Set-NvDisplayConfig.ps1`](../scripts/Set-NvDisplayConfig.ps1) `-Rig i7-13700k-rtx4080 -DryRun`: `-Target apolloVirtDisplay` with `APOLLO_CLIENT_FPS` = `90`, `120`, `90000` (millihertz), and unset must give V-Sync Off with FRL `87`, `117`, `87`, `117`; `-Target PG27UQR` (case-insensitive) must give V-Sync On, FRL `155` and a `.nip` with exactly V-Sync `1199655232` + both limiter IDs at `155`; an unknown target must fail. Needs no Profile Inspector. (See [`docs/gpu-tuning-guide.md`](gpu-tuning-guide.md#4-streaming-with-apollo--sunshine-g-sync-v-sync-switch).) |
 | **9. Sensor Telemetry** | `SensorCli.exe 1` | Runs a 1-sample read from [`tools/SensorCli/Program.cs`](../tools/SensorCli/Program.cs), confirms CPU telemetry is present, and verifies all `=== <Hardware> ===` headers contain only clean printable ASCII characters (`0x20–0x7E`) with no corrupted SPD bytes. |
 
 ---

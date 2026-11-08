@@ -2,7 +2,7 @@
 .SYNOPSIS
     Non-destructive smoke test suite for the Agentic PC Tuning & Stability Toolkit.
     Verifies PowerShell AST syntax, .gitignore rules, Bootstrap-Tools, MvoltHelpers,
-    Inspect-System, Diagnose-Crashes, Manage-CpuPowerPlan, Profile DryRun, and SensorCli
+    Inspect-System, Diagnose-Crashes, Manage-CpuPowerPlan, Profile DryRun, NVIDIA streaming profiles, and SensorCli
     without modifying GPU clocks or active power plans.
 #>
 param(
@@ -86,6 +86,39 @@ Run-Test "Static Check: GPU profile scripts & JSONs use percentage power (--powe
                 throw "$($jf.Name) profile '$($p.name)' has power.percent=$($p.controls.power.percent) but power.enabled=$($p.controls.power.enabled) / power_cap.enabled=$($p.controls.power_cap.enabled)."
             }
         }
+    }
+}
+
+Run-Test "Static Check: profiles/*/nvidia-display-config.json resolve to Base Profile .nip files" {
+    $script = Join-Path $RepoRoot "scripts\Set-NvDisplayConfig.ps1"
+    $configs = @(Get-ChildItem -Path (Join-Path $RepoRoot "profiles\*\nvidia-display-config.json") -File)
+    if (-not $configs) { throw "No profiles\*\nvidia-display-config.json found." }
+    $saved = $env:APOLLO_CLIENT_FPS
+    try {
+        $env:APOLLO_CLIENT_FPS = "90"
+        foreach ($f in $configs) {
+            $rig = $f.Directory.Name
+            $cfg = Get-Content -LiteralPath $f.FullName -Raw | ConvertFrom-Json
+            # Import merges, so a setting only some displays list would leak across switches.
+            $keySets = @($cfg.PSObject.Properties | ForEach-Object { (@($_.Value.PSObject.Properties.Name) | Sort-Object) -join "," }) | Sort-Object -Unique
+            if ($keySets.Count -ne 1) { throw "${rig}: displays list different settings ($($keySets -join ' | '))." }
+            foreach ($d in $cfg.PSObject.Properties.Name) {
+                $out = & $script -Rig $rig -Target $d -DryRun *>&1 | Out-String
+                if ($LASTEXITCODE -ne 0) { throw "${rig}/${d} failed to resolve. Output:`n$out" }
+                [xml]$x = Get-Content -LiteralPath (Join-Path $env:TEMP "nvdisplay-$d.nip") -Raw
+                $profs = @($x.ArrayOfProfile.Profile)
+                if ($profs.Count -ne 1 -or $profs[0].ProfileName -ne "Base Profile") {
+                    throw "${rig}/${d}: generated .nip must contain exactly one 'Base Profile'."
+                }
+                foreach ($ps in @($profs[0].Settings.ProfileSetting)) {
+                    if ($ps.SettingID -notmatch '^\d+$' -or $ps.SettingValue -notmatch '^\d+$' -or $ps.ValueType -ne "Dword") {
+                        throw "${rig}/${d}: malformed setting $($ps.SettingNameInfo) ($($ps.SettingID)=$($ps.SettingValue))."
+                    }
+                }
+            }
+        }
+    } finally {
+        $env:APOLLO_CLIENT_FPS = $saved
     }
 }
 
@@ -191,6 +224,39 @@ Run-Test "Apply-Gemini-v1.0-4080.ps1: -DryRun validates without writing" -Skip:(
     $out = & (Join-Path $RepoRoot "profiles\i7-13700k-rtx4080\Apply-Gemini-v1.0-4080.ps1") -DryRun -SkipGpuCheck *>&1 | Out-String
     if ($LASTEXITCODE -ne 0 -or $out -notmatch "\[DRY RUN\] All checks passed") {
         throw "Apply-Gemini-v1.0-4080.ps1 -DryRun failed. Output:`n$out"
+    }
+}
+
+Run-Test "Set-NvDisplayConfig.ps1: -DryRun resolves display targets to V-Sync + Frame Rate Limiter" {
+    $script = Join-Path $RepoRoot "scripts\Set-NvDisplayConfig.ps1"
+    $rig = "i7-13700k-rtx4080"
+    $saved = $env:APOLLO_CLIENT_FPS
+    try {
+        # Apollo passes plain fps; some Sunshine builds pass millihertz; a missing value defaults to 120
+        foreach ($case in @(@("90", 87), @("120", 117), @("90000", 87), @("", 117))) {
+            $env:APOLLO_CLIENT_FPS = $case[0]
+            $out = & $script -Rig $rig -Target apolloVirtDisplay -DryRun *>&1 | Out-String
+            if ($LASTEXITCODE -ne 0 -or $out -notmatch "\(vsync=off, frameCap=$($case[1])\)") {
+                throw "APOLLO_CLIENT_FPS='$($case[0])' did not produce V-Sync Off, FRL $($case[1]). Output:`n$out"
+            }
+        }
+        # Fixed cap; target keys match case-insensitively
+        $out = & $script -Rig $rig -Target PG27UQR -DryRun *>&1 | Out-String
+        if ($LASTEXITCODE -ne 0 -or $out -notmatch "pg27uqr: importing .*nvdisplay-pg27uqr\.nip \(vsync=on, frameCap=155\)") {
+            throw "-Target pg27uqr did not import V-Sync On, FRL 155. Output:`n$out"
+        }
+        # Generated .nip carries the driver's DWORDs: V-Sync Force On + both limiter IDs
+        [xml]$x = Get-Content -LiteralPath (Join-Path $env:TEMP "nvdisplay-pg27uqr.nip") -Raw
+        $got = @{}; foreach ($ps in @($x.ArrayOfProfile.Profile.Settings.ProfileSetting)) { $got[$ps.SettingID] = $ps.SettingValue }
+        if ($got["11041231"] -ne "1199655232" -or $got["277041154"] -ne "155" -or $got["277041162"] -ne "155" -or $got.Count -ne 3) {
+            throw "nvdisplay-pg27uqr.nip has unexpected settings: $(($got.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join ', ')"
+        }
+        $out = & $script -Rig $rig -Target noSuchDisplay -DryRun *>&1 | Out-String
+        if ($LASTEXITCODE -eq 0 -or $out -notmatch "unknown target") {
+            throw "An unknown -Target did not fail. Output:`n$out"
+        }
+    } finally {
+        $env:APOLLO_CLIENT_FPS = $saved
     }
 }
 

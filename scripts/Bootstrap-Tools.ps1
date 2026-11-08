@@ -7,6 +7,7 @@
     4. SensorCli.exe (CPU/Motherboard/DDR5 telemetry & native Scalar/AVX2 stress tool)
     5. mVolt+.exe (NVIDIA Ada/Blackwell VF & XBar CLI tuner from b00nz/mVolt)
     6. FurMark 2 CLI (Vulkan GPU benchmark & artifact scanner)
+    7. NVIDIA Profile Inspector (optional; used by Set-NvDisplayConfig.ps1 for streaming)
 #>
 param(
     [switch]$DownloadMissing
@@ -116,4 +117,25 @@ if ($fmExe) {
     Write-Host "  [OK] FurMark 2 CLI found at: $fmExe" -ForegroundColor Green
 } else {
     Write-Host "  [WARN] FurMark 2 not found. Run with -DownloadMissing or install Geeks3D.FurMark.2 via winget." -ForegroundColor Yellow
+}
+
+Write-Host "`n=== 5. Checking NVIDIA Profile Inspector (optional: streaming V-Sync switch) ===" -ForegroundColor Cyan
+$nvInspectDir = Join-Path $BinDir "nvinspect"
+$nvInspectExe = Join-Path $nvInspectDir "nvidiaProfileInspector.exe"
+if (-not (Test-Path -LiteralPath $nvInspectExe) -and $DownloadMissing) {
+    Write-Host "  Downloading latest NVIDIA Profile Inspector release from GitHub (Orbmu2k/nvidiaProfileInspector)..."
+    $rel = Invoke-RestMethod -Uri "https://api.github.com/repos/Orbmu2k/nvidiaProfileInspector/releases/latest"
+    $asset = $rel.assets | Where-Object { $_.name -match "\.zip$" } | Select-Object -First 1
+    if ($asset) {
+        New-Item -ItemType Directory -Path $nvInspectDir -Force | Out-Null
+        $zip = Join-Path $nvInspectDir $asset.name
+        Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zip
+        Expand-Archive -Path $zip -DestinationPath $nvInspectDir -Force
+        Remove-Item -LiteralPath $zip
+    }
+}
+if (Test-Path -LiteralPath $nvInspectExe) {
+    Write-Host "  [OK] NVIDIA Profile Inspector ready at: $nvInspectExe" -ForegroundColor Green
+} else {
+    Write-Host "  [WARN] NVIDIA Profile Inspector not found (only needed for Set-NvDisplayConfig.ps1). Re-run with -DownloadMissing or extract it from https://github.com/Orbmu2k/nvidiaProfileInspector/releases to $nvInspectDir" -ForegroundColor Yellow
 }

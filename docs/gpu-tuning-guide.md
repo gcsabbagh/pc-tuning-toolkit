@@ -60,7 +60,7 @@ This guide covers safe, high-stability GPU optimization using **`mVolt+`** (`b00
 ```powershell
 .\scripts\Run-GpuBenchmark.ps1 -Label "00_stock_baseline" -ResetToDefault -Runs 3
 ```
-Each run is a 30-second FurMark 2 Knot (`furmark-knot-vk`) pass at `2560×1440` with the artifact scanner on. The script reports each run's **FurMark 2 Score**, **Min/Avg/Max FPS**, **Avg/Max Core Clock**, **VRAM Clock**, and **Core/VRAM Temps**, then the **mean / min / max / stdev / spread %** across runs. Results are saved to `tools\bin\fm_<Label>_summary.csv`.
+Each run is a 30-second FurMark 2 Knot (`furmark-knot-vk`) pass at `2560×1440` with the artifact scanner on. The script reports each run's **FurMark 2 Score**, **Min/Avg/Max FPS**, **Avg/Max Core Clock**, **VRAM Clock**, and **Core/VRAM Temps**, then the **mean / min / max / stdev / spread %** across runs. Results are saved to `output\fm_<Label>_summary.csv` (git-ignored; change with `-OutputDir`). Copy runs worth keeping into `profiles/<hardware-slug>/benchmarks/`.
 
 The baseline's run-to-run spread is your noise floor: **a later change that moves the score by less than that spread is not a real difference.**
 
@@ -95,3 +95,43 @@ Once the **Rock-Solid Gaming** values are chosen and verified:
    .\scripts\Launch-InteractiveGui.ps1 -ExecutablePath "$PWD\tools\bin\mVolt+.exe"
    ```
 3. Have the user save the profile (e.g., `Gemini v1.0`) and enable **Start with Windows**, then verify the saved JSON in `%LOCALAPPDATA%\mVolt+\profiles\`.
+
+---
+
+## 4. Streaming with Apollo / Sunshine (G-Sync V-Sync Switch)
+
+The recommended G-Sync setup (**V-Sync = On** + Frame Rate Limiter just below max refresh in the NVIDIA Control Panel) breaks streaming. Apollo/Sunshine's virtual display has no VRR, so the global V-Sync becomes classic V-Sync: the game locks to the stream refresh, frames queue, and NVIDIA's PC Latency jumps from `~20–40 ms` to `120–150 ms` (measured at `1440p120` on an RTX 4080).
+
+Switch the global driver profile to match the display the game is about to run on, instead of choosing one setting for both. Each rig lists its displays in `profiles/<rig>/nvidia-display-config.json`, e.g. [`profiles/i7-13700k-rtx4080/nvidia-display-config.json`](../profiles/i7-13700k-rtx4080/nvidia-display-config.json):
+
+```json
+{
+  "pg27uqr":           { "vsync": "on",  "frameCap": 155 },
+  "apolloVirtDisplay": { "vsync": "off", "frameCap": { "fromClientFps": -3, "min": 30 } }
+}
+```
+
+| Display | V-Sync | Frame Rate Limiter |
+| :--- | :--- | :--- |
+| **`pg27uqr`** (160 Hz G-Sync monitor) | On | fixed `155` (`0` = off) |
+| **`apolloVirtDisplay`** (stream, no VRR) | Off | client fps `- 3` (`90 → 87`, `120 → 117`), from `APOLLO_CLIENT_FPS` |
+
+[`scripts/Set-NvDisplayConfig.ps1`](../scripts/Set-NvDisplayConfig.ps1) `-Rig <rig> -Target <display>` builds a `.nip` from that display's settings and imports it with NVIDIA Profile Inspector `v3.0.2.1+` (`-silentImport`; installed by `Bootstrap-Tools.ps1 -DownloadMissing`). The settings go into the driver's **global** profile, so they apply to every display at once: `-Target` names where the next game will be shown.
+
+- **Add a display:** add an entry to the JSON. No code change.
+- **Add a driver setting:** add it to `$KnownSettings` in the script (name → setting ID(s) + value conversion), then use it by name in the JSON.
+- **List the same settings for every display.** Import merges into the existing profile, so a setting only one display lists stays in the driver after switching away. The script warns and the smoke tests fail if displays differ.
+
+Call it from Apollo's `global_state_cmd` (runs on resume/pause), plus an undo in `global_prep_cmd` for sessions that are terminated rather than paused:
+
+```ini
+global_state_cmd = [{"do":"powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File <repo>\scripts\Set-NvDisplayConfig.ps1 -Rig i7-13700k-rtx4080 -Target apolloVirtDisplay","elevated":true,"undo":"powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File <repo>\scripts\Set-NvDisplayConfig.ps1 -Rig i7-13700k-rtx4080 -Target pg27uqr"}]
+global_prep_cmd = [{"do":"","elevated":true,"undo":"powershell.exe ... Set-NvDisplayConfig.ps1 -Rig i7-13700k-rtx4080 -Target pg27uqr"}]
+```
+
+- **`"elevated": true` is required:** Profile Inspector's manifest is `requireAdministrator`, so a non-elevated command raises a UAC prompt on the host and stalls the stream until someone accepts it.
+- Connect with a real app (e.g. **Desktop**), not Apollo's built-in **Virtual Display** entry, which runs neither prep nor state commands.
+- Driver profile changes only apply to games launched afterwards: connect first, then start the game.
+- Close Profile Inspector before streaming; an open instance receives the import instead.
+- Each switch is logged to `tools\bin\nvinspect\apollo-nvprofile.log`.
+- In-game, prefer **Borderless / Windowed Fullscreen** while streaming; exclusive fullscreen mode switches reset Apollo's capture.
