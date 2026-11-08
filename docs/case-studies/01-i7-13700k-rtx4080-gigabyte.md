@@ -23,7 +23,7 @@ This document records the complete end-to-end hardware inspection, crash forensi
    - That custom curve manually locked individual voltage points (`+142 MHz` at `900 mV` tapering down to `+113 MHz` at `990–1,035 mV`) and flattened the high-voltage tail.
    - Across recent driver updates, those intermediate `975–1,035 mV` voltage bins were slightly starved for voltage during rapid DX12/D3D11 load transitions—triggering **`nvlddmkm` Event ID 153** TDR resets during gameplay.
 2. **Clean-Slate Remediation:**
-   - Backed up all MSI Afterburner `.cfg` profiles to [`profiles/i7-13700k-rtx4080/ab_backup/`](../../profiles/i7-13700k-rtx4080/ab_backup/).
+   - Backed up all MSI Afterburner `.cfg` profiles to `profiles/i7-13700k-rtx4080/backups/msi-afterburner/` (local only, git-ignored).
    - Cleared Afterburner's per-point `VFCurve` to `0` offsets so it could no longer fight `mVolt+`.
 
 ### B. Controlled GPU Benchmark Sweeps (FurMark 2 Vulkan Knot 1440p + Artifact Scanner)
@@ -31,7 +31,7 @@ Each pass was a 30-second FurMark 2 Knot run (`--demo furmark-knot-vk --duration
 
 | Pass / Profile | Date / Time | Power Cap | Core Offset | `XBar` Offset | VRAM Offset | Sustained Core / VRAM Clock | FurMark 2 Score | FPS (Min / Avg / Max) | Core / VRAM Temp | Real-World Gaming Stability |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **0. Prior Afterburner OC** ([`ab_backup/`](../../profiles/i7-13700k-rtx4080/ab_backup/)) | `Oct 16 20:21` | `117%` | Custom V/F curve | — | `+1,200 MHz` | `2,806 MHz` / `24,805 MHz` | `2,152` | `64 / 71 / 74` | `62°C` / `52°C` | **TDRs (`nvlddmkm` 153) in games** (see A) |
+| **0. Prior Afterburner OC** (`backups/msi-afterburner/`) | `Oct 16 20:21` | `117%` | Custom V/F curve | — | `+1,200 MHz` | `2,806 MHz` / `24,805 MHz` | `2,152` | `64 / 71 / 74` | `62°C` / `52°C` | **TDRs (`nvlddmkm` 153) in games** (see A) |
 | **1. VRAM + XBar Test** | `Oct 16 20:49` | `400 W` | `+0 MHz` | `+180 MHz` | `+1,350 MHz` | `2,806 MHz` / `25,105 MHz` | `2,004` | `63 / 67 / 75` | `61°C` / `54°C` | Not game-tested |
 | **2. Aggressive Push** | `Oct 16 20:50` | `400 W` | `+135 MHz` | `+180 MHz` | `+1,100 MHz` | `2,910–2,926 MHz` / `24,605 MHz` | `2,251` | `68 / 74 / 77` | `67°C` / `56°C` | Not game-tested |
 | **3. Peak Synthetic** | `Oct 16 20:51` | `400 W` | `+150 MHz` | `+210 MHz` | `+1,150 MHz` | `2,926–2,940 MHz` / `24,705 MHz` | `2,278` | `68 / 75 / 78` | `66°C` / `60°C` | Not game-tested |

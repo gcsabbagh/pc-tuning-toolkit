@@ -10,8 +10,9 @@
     final profile with OCCT 3D Adaptive and a real multiplayer session.
 
     Scores come from FurMark's own _scores.csv (written next to furmark.exe after each
-    --benchmark --duration-ms run). Per-run telemetry is written to tools\bin\fm_<Label>[_runN].csv
-    and a summary to tools\bin\fm_<Label>_summary.csv.
+    --benchmark --duration-ms run). Per-run telemetry is written to <OutputDir>\fm_<Label>[_runN].csv
+    and a summary to <OutputDir>\fm_<Label>_summary.csv. OutputDir defaults to the git-ignored
+    output\ folder at the repo root; copy runs worth keeping into profiles\<hardware-slug>\benchmarks\.
 #>
 param(
     [string]$Label = "benchmark",
@@ -28,11 +29,14 @@ param(
     [int]$XbarOffset = -9999,
     [int]$MemOffset = -9999,
     [switch]$ResetToDefault,
-    [string]$FurMarkPath = ""
+    [string]$FurMarkPath = "",
+    [string]$OutputDir = ""
 )
 
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $BinDir = Join-Path $RepoRoot "tools\bin"
+if (-not $OutputDir) { $OutputDir = Join-Path $RepoRoot "output" }
+New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 . (Join-Path $PSScriptRoot "MvoltHelpers.ps1")
 $mvolt = Find-Mvolt -RepoRoot $RepoRoot
 
@@ -135,7 +139,7 @@ function Get-FurMarkTelemetry([string]$CsvPath) {
 $results = @()
 for ($run = 1; $run -le $Runs; $run++) {
     $suffix = if ($Runs -gt 1) { "_run$run" } else { "" }
-    $csvOut = Join-Path $BinDir "fm_$Label$suffix.csv"
+    $csvOut = Join-Path $OutputDir "fm_$Label$suffix.csv"
     Remove-Item -LiteralPath $csvOut -ErrorAction SilentlyContinue
 
     if ($run -gt 1 -and $CooldownSec -gt 0) {
@@ -220,7 +224,7 @@ if (@($results | ForEach-Object { "$($_.PowerW)|$($_.CoreOff)|$($_.XbarOff)|$($_
     Write-Warning "mVolt+ settings changed between runs; these runs are not comparable."
 }
 
-$summaryCsv = Join-Path $BinDir "fm_$($Label)_summary.csv"
+$summaryCsv = Join-Path $OutputDir "fm_$($Label)_summary.csv"
 $results | Export-Csv -LiteralPath $summaryCsv -NoTypeInformation
 Write-Host "Summary saved to: $summaryCsv" -ForegroundColor Cyan
 if ($results.Count -lt $Runs) {

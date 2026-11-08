@@ -28,8 +28,9 @@ Whether you are tuning your PC yourself or guiding an AI agent through the proce
 | **[4. CPU, DDR5 & OS Scheduler Playbook (AMD X3D & Intel)](docs/cpu-tuning-guide.md)** | Complete tuning guides for **AMD Ryzen 3D V-Cache (`9850X3D`, `9800X3D`, `7800X3D`, `9950X3D`)** (PBO2 Curve Optimizer, `VSOC <= 1.25V`, DDR5 `1:1 UCLK=MCLK`, Single vs. Dual-CCD core parking) and **Intel 13th/14th Gen Hybrid (`i7-13700K`, `14700K`, `14900K`)** (Microcode `0x12F` safety, Speed Shift EPP idle power fix, P/E-core affinities). |
 | **[5. Crash Diagnostics & Event Log Forensics](docs/crash-diagnostics-guide.md)** | How to read Windows Event Logs (`nvlddmkm` Event IDs `153/14`, `Display 4101`, `LiveKernelEvent 141`, and CPU `WHEA-Logger` Event IDs `18/19`) to immediately tell whether a game crashed from GPU Core, VRAM, CPU undervolt, RAM, or a game bug. |
 | **[6. Case Study #1: i7-13700K + Gigabyte RTX 4080](docs/case-studies/01-i7-13700k-rtx4080-gigabyte.md)** | Real-world walkthrough of our first tuned rig: diagnosing Afterburner V/F curve TDRs, running 5 FurMark 2 + artifact scanner sweeps, catching a transient boost spike in `Invokyr`, locking in the rock-solid **`Gemini v1.0`** profile, and dropping idle CPU power from **`67.4W` $\rightarrow$ `22.5W` (`-25°C` cooler)**. |
-| **[7. Testing & Regression Verification Guide](docs/testing-and-verification.md)** | How to run [`tests/Invoke-SmokeTests.ps1`](tests/Invoke-SmokeTests.ps1) (full hardware mode or `-SkipHardwareTests` static mode) to verify AST syntax, static policy guards, `mVolt+` helpers, `SensorCli`, and script execution after making changes. |
-| **[8. Autonomous AI Agent Playbook (`AGENTS.md`)](AGENTS.md)** | Step-by-step operational instructions, safety guardrails, and PowerShell commands for AI coding assistants. |
+| **[7. Case Study #2: Apollo $\rightarrow$ Steam Deck Streaming](docs/case-studies/02-apollo-streaming-steam-deck.md)** | Tracking down streaming hitches and latency on the same rig: a monitor's DisplayPort hotplug resetting capture, Steam Deck `wpa_supplicant` scans causing network jitter, Sunshine moved to the E-cores, and an automatic G-Sync $\leftrightarrow$ streaming V-Sync switch that removes classic V-Sync queuing on Apollo's virtual display. |
+| **[8. Testing & Regression Verification Guide](docs/testing-and-verification.md)** | How to run [`tests/Invoke-SmokeTests.ps1`](tests/Invoke-SmokeTests.ps1) (full hardware mode or `-SkipHardwareTests` static mode) to verify AST syntax, static policy guards, `mVolt+` helpers, `SensorCli`, and script execution after making changes. |
+| **[9. Autonomous AI Agent Playbook (`AGENTS.md`)](AGENTS.md)** | Step-by-step operational instructions, safety guardrails, and PowerShell commands for AI coding assistants. |
 
 ---
 
@@ -46,22 +47,11 @@ Whether you are tuning your PC yourself or guiding an AI agent through the proce
 
 ## Prerequisites, Required Libraries & Tools
 
-All required runtimes, drivers, and benchmarking tools can be installed automatically by running **`.\scripts\Bootstrap-Tools.ps1 -DownloadMissing`** from an **Administrator** PowerShell prompt, or installed manually via `winget` (see [`docs/prerequisites-and-setup.md`](docs/prerequisites-and-setup.md) for full details):
+Run **`.\scripts\Bootstrap-Tools.ps1 -DownloadMissing`** from an **Administrator** PowerShell prompt to install or locate everything automatically. The full dependency matrix, `winget` IDs, and troubleshooting live in [`docs/prerequisites-and-setup.md`](docs/prerequisites-and-setup.md).
 
-| Component / Tool | Required? | Purpose in Toolkit | Automated / Manual Install Command |
-| :--- | :--- | :--- | :--- |
-| **Administrator Shell** | **Yes** | Required for ring-0 CPU/motherboard/DDR5 telemetry (`PawnIO`) and NVAPI GPU clock/power control (`mVolt+`). | Launch IDE or PowerShell with **Run as Administrator** |
-| **`.NET 8 SDK` + `.NET 10 Runtime`** | **Yes** | Compiles and executes [`tools/SensorCli/`](tools/SensorCli/Program.cs) (`dotnet build` + `.NET 10` runtime roll-forward for `LibreHardwareMonitorLib.dll`). | `winget install Microsoft.DotNet.SDK.8`<br>`winget install Microsoft.DotNet.DesktopRuntime.10` |
-| **FanControl (`LibreHardwareMonitorLib.dll` + `PawnIO`)** | **Yes** | Provides `LibreHardwareMonitorLib.dll` (`v0.9.6+`) and the Microsoft-signed **`PawnIO` kernel driver** so `SensorCli.exe` can read Intel & AMD Ryzen X3D per-core temps, clocks, `Vcore`/`VSOC`, Package Power, and DDR5 DIMM sensors **even with Windows VBS / Memory Integrity ON**. | `winget install Rem0o.FanControl` |
-| **`mVolt+` (`v0.50.4+`)** | **Yes (NVIDIA)** | Lightweight NVAPI CLI + GUI tuner for NVIDIA RTX 30/40/50-series GPUs (`--power`, `--core`, `--xbar-offset`, `--mem`). | Auto-downloaded from [`b00nz/mVolt`](https://github.com/b00nz/mVolt/releases/latest) by `Bootstrap-Tools.ps1 -DownloadMissing` |
-| **FurMark 2 (`v2.10+` x64)** | **Yes (GPU Bench)** | Scriptable Vulkan CLI benchmark (`furmark.exe --demo furmark-knot-vk --benchmark`) with real-time **GPU Artifact Scanner (`--artifact-scanner`)** and CSV telemetry logger. | `winget install Geeks3D.FurMark.2` |
-| **OCCT Personal** | **Recommended** | **3D Adaptive** variable-load GPU stability validation (run from the GUI) and per-core AMD Curve Optimizer (CO) core cycling. | `winget install OCBase.OCCT.Personal` |
-| **Process Lasso** | *Optional* | Used to pin background apps (`discord.exe`, browsers, OBS) to Intel E-cores or AMD secondary CCDs and manage power plans. | `winget install Bitsum.ProcessLasso` |
-
-### Manual One-Liner Prerequisite Install (`winget`)
-```powershell
-winget install --id Microsoft.DotNet.SDK.8 -e ; winget install --id Microsoft.DotNet.DesktopRuntime.10 -e ; winget install --id Rem0o.FanControl -e ; winget install --id Geeks3D.FurMark.2 -e
-```
+* **Required:** Administrator shell, `.NET 8 SDK` + `.NET 10 Runtime`, FanControl (`LibreHardwareMonitorLib.dll` + `PawnIO`), `mVolt+` (NVIDIA), FurMark 2 (GPU bench), NVIDIA driver (`nvidia-smi`).
+* **Recommended:** OCCT Personal (3D Adaptive stability validation).
+* **Optional:** NVIDIA Profile Inspector (streaming V-Sync switch), Process Lasso (background-app affinity).
 
 ---
 
@@ -111,9 +101,11 @@ pc-tuning-toolkit/
 │   ├── crash-diagnostics-guide.md             # Event Log forensics (nvlddmkm TDRs, WHEA-Logger, DXGI_ERROR_DEVICE_HUNG)
 │   ├── testing-and-verification.md            # Automated non-destructive smoke & regression test suite guide
 │   └── case-studies/
-│       └── 01-i7-13700k-rtx4080-gigabyte.md   # Case Study #1: Full thinking, baseline, sweeps & verified results
+│       ├── 01-i7-13700k-rtx4080-gigabyte.md   # Case Study #1: Full thinking, baseline, sweeps & verified results
+│       └── 02-apollo-streaming-steam-deck.md  # Case Study #2: Apollo -> Steam Deck streaming hitches & latency fixes
 ├── scripts/
-│   ├── Bootstrap-Tools.ps1                    # Locates/downloads mVolt+, LibreHardwareMonitorLib (PawnIO), SensorCli, FurMark 2
+│   ├── Bootstrap-Tools.ps1                    # Locates/downloads mVolt+, LibreHardwareMonitorLib (PawnIO), SensorCli, FurMark 2, Profile Inspector
+│   ├── Set-NvDisplayConfig.ps1                # Applies a rig's per-display NVIDIA settings (V-Sync, FPS cap) for the target display
 │   ├── Inspect-System.ps1                     # Hardware discovery: CPU, Microcode/AGESA, BIOS, VBS, DDR5, GPU VBIOS, Power Plan
 │   ├── Diagnose-Crashes.ps1                   # Scans Windows Event Logs for GPU TDRs, WHEA hardware errors, BSODs & app faults
 │   ├── Run-GpuBenchmark.ps1                   # Automated mVolt+ tuner + FurMark 2 Vulkan Knot + Artifact Scanner + CSV logger
@@ -130,8 +122,10 @@ pc-tuning-toolkit/
     └── i7-13700k-rtx4080/                     # Saved profiles, backups & benchmark logs from Case Study #1
         ├── Apply-Gemini-v1.0-4080.ps1         # 1-click apply for RTX 4080 Rock-Solid Gaming profile (+60 Core/+120 XBar/+1000 Mem)
         ├── Apply-SmartHighPerf-13700K.ps1     # 1-click apply for i7-13700K Option B Power Plan (67W -> 22W idle, 0.83V, 36°C)
+        ├── nvidia-display-config.json         # Per-display NVIDIA settings (pg27uqr, apolloVirtDisplay) for Set-NvDisplayConfig.ps1
+        ├── README.md                          # Index of this profile's files
+        ├── process-lasso-rules.md             # Process Lasso rule set (games on P-Cores, background & Sunshine on E-Cores)
         ├── mvolt-gemini-v1.0-profile.json     # Exported mVolt+ JSON profile
-        ├── Bitsum_Original_Backup.pow         # Original Windows Power Plan backup
-        ├── ab_backup/                         # Original MSI Afterburner profile backups
-        └── benchmarks/                        # Raw FurMark 2 CSVs & CPU stress logs
+        ├── benchmarks/                        # Raw FurMark 2 CSVs & CPU stress logs
+        └── backups/                           # Local only (git-ignored): original power plan + MSI Afterburner profiles
 ```

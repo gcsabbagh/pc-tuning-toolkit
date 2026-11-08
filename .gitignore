@@ -12,3 +12,9 @@ tools/bin/*
 # Temporary logs
 *.tmp
 *.log
+
+# Benchmark run output (scripts/Run-GpuBenchmark.ps1 -OutputDir default)
+output/
+
+# Pre-tuning backups of the user's own settings (Afterburner, power plans): local only
+profiles/*/backups/
